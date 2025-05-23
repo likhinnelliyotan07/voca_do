@@ -6,6 +6,7 @@ import 'package:voca_do/presentation/blocs/task_bloc.dart';
 import 'package:voca_do/presentation/screens/task_edit_screen.dart';
 import 'package:voca_do/domain/models/task.dart';
 import 'package:voca_do/domain/models/task_type.dart';
+import 'package:voca_do/domain/models/muscle_group.dart';
 
 class TaskList extends StatelessWidget {
   const TaskList({super.key});
@@ -131,6 +132,7 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  bool _isExpanded = false;
 
   @override
   void initState() {
@@ -178,112 +180,215 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
             scale: _scaleAnimation,
             child: Card(
               margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: Row(
-                  mainAxisSize: MainAxisSize.min,
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _isExpanded = !_isExpanded;
+                  });
+                },
+                child: Column(
                   children: [
-                    Checkbox(
-                      value: widget.task.isCompleted,
-                      onChanged: (value) {
-                        context
-                            .read<TaskBloc>()
-                            .add(ToggleTaskCompletion(widget.task.id));
-                      },
-                    ),
-                    Icon(
-                      TaskType.basic.icon,
-                      color: TaskType.basic.color,
-                    ),
-                  ],
-                ),
-                title: Text(
-                  widget.task.title,
-                  style: TextStyle(
-                    decoration: widget.task.isCompleted
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
-                ),
-                subtitle: widget.task.dueDate != null
-                    ? Row(
+                    ListTile(
+                      leading: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          FaIcon(
-                            FontAwesomeIcons.clock,
-                            size: 12,
-                            color: _isOverdue(widget.task.dueDate!)
-                                ? Colors.red
-                                : Theme.of(context).colorScheme.secondary,
+                          Checkbox(
+                            value: widget.task.isCompleted,
+                            onChanged: (value) {
+                              context
+                                  .read<TaskBloc>()
+                                  .add(ToggleTaskCompletion(widget.task.id));
+                            },
                           ),
-                          const SizedBox(width: 4),
-                          SizedBox(
-                            width: 120,
-                            child: Text(
-                              'Due: ${_formatDateTime(widget.task.dueDate!)}',
-                              style: TextStyle(
-                                color: _isOverdue(widget.task.dueDate!)
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.secondary,
-                              ),
-                            ),
+                          Icon(
+                            TaskType.values
+                                .firstWhere(
+                                  (type) => type.name == widget.task.taskType,
+                                  orElse: () => TaskType.basic,
+                                )
+                                .icon,
+                            color: TaskType.values
+                                .firstWhere(
+                                  (type) => type.name == widget.task.taskType,
+                                  orElse: () => TaskType.basic,
+                                )
+                                .color,
                           ),
                         ],
-                      )
-                    : null,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: FaIcon(
-                        FontAwesomeIcons.penToSquare,
-                        color: Theme.of(context).colorScheme.primary,
                       ),
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TaskEditScreen(
-                              task: Task(
-                                id: widget.task.id,
-                                title: widget.task.title,
-                                description: '',
-                                createdAt: widget.task.createdAt,
-                                type: TaskType.basic,
-                              ),
+                      title: Text(
+                        widget.task.title,
+                        style: TextStyle(
+                          decoration: widget.task.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.task.taskType == 'workout' &&
+                              widget.task.muscleGroup != null)
+                            Row(
+                              children: [
+                                Icon(
+                                  MuscleGroup.values
+                                      .firstWhere(
+                                        (group) =>
+                                            group.name ==
+                                            widget.task.muscleGroup,
+                                        orElse: () => MuscleGroup.fullBody,
+                                      )
+                                      .icon,
+                                  size: 12,
+                                  color: MuscleGroup.values
+                                      .firstWhere(
+                                        (group) =>
+                                            group.name ==
+                                            widget.task.muscleGroup,
+                                        orElse: () => MuscleGroup.fullBody,
+                                      )
+                                      .color,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  MuscleGroup.values
+                                      .firstWhere(
+                                        (group) =>
+                                            group.name ==
+                                            widget.task.muscleGroup,
+                                        orElse: () => MuscleGroup.fullBody,
+                                      )
+                                      .label,
+                                  style: TextStyle(
+                                    color: MuscleGroup.values
+                                        .firstWhere(
+                                          (group) =>
+                                              group.name ==
+                                              widget.task.muscleGroup,
+                                          orElse: () => MuscleGroup.fullBody,
+                                        )
+                                        .color,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        );
-                        if (result != null) {
-                          context.read<TaskBloc>().add(
-                                UpdateTask(
-                                  TaskModel(
-                                    id: result.id,
-                                    title: result.title,
-                                    dueDate: widget.task.dueDate,
-                                    isCompleted: widget.task.isCompleted,
-                                    createdAt: result.createdAt,
+                          if (widget.task.dueDate != null)
+                            Row(
+                              children: [
+                                FaIcon(
+                                  FontAwesomeIcons.clock,
+                                  size: 12,
+                                  color: _isOverdue(widget.task.dueDate!)
+                                      ? Colors.red
+                                      : Theme.of(context).colorScheme.secondary,
+                                ),
+                                const SizedBox(width: 4),
+                                SizedBox(
+                                  width: 120,
+                                  child: Text(
+                                    'Due: ${_formatDateTime(widget.task.dueDate!)}',
+                                    style: TextStyle(
+                                      color: _isOverdue(widget.task.dueDate!)
+                                          ? Colors.red
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .secondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: FaIcon(
+                              FontAwesomeIcons.penToSquare,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            onPressed: () async {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TaskEditScreen(
+                                    task: Task(
+                                      id: widget.task.id,
+                                      title: widget.task.title,
+                                      description:
+                                          widget.task.description ?? '',
+                                      createdAt: widget.task.createdAt,
+                                      type: TaskType.basic,
+                                    ),
                                   ),
                                 ),
                               );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Task updated successfully'),
-                              duration: Duration(seconds: 2),
+                              if (result != null) {
+                                context.read<TaskBloc>().add(
+                                      UpdateTask(
+                                        TaskModel(
+                                          id: result.id,
+                                          title: result.title,
+                                          description: result.description,
+                                          dueDate: widget.task.dueDate,
+                                          isCompleted: widget.task.isCompleted,
+                                          createdAt: result.createdAt,
+                                        ),
+                                      ),
+                                    );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Task updated successfully'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          IconButton(
+                            icon: FaIcon(
+                              FontAwesomeIcons.trash,
+                              color: Theme.of(context).colorScheme.error,
                             ),
-                          );
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: FaIcon(
-                        FontAwesomeIcons.trash,
-                        color: Theme.of(context).colorScheme.error,
+                            onPressed: () {
+                              context
+                                  .read<TaskBloc>()
+                                  .add(DeleteTask(widget.task.id));
+                            },
+                          ),
+                        ],
                       ),
-                      onPressed: () {
-                        context
-                            .read<TaskBloc>()
-                            .add(DeleteTask(widget.task.id));
-                      },
                     ),
+                    if (_isExpanded &&
+                        widget.task.description != null &&
+                        widget.task.description!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Divider(),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Description:',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.secondary,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.task.description!,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),

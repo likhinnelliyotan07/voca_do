@@ -1,4 +1,5 @@
 import 'package:voca_do/domain/models/task_type.dart';
+import 'package:voca_do/domain/models/muscle_group.dart';
 
 class Task {
   final String id;
@@ -13,6 +14,7 @@ class Task {
   final String? location;
   final DateTime? reminderTime;
   final String? imagePath;
+  final MuscleGroup? muscleGroup;
 
   Task({
     required this.id,
@@ -27,6 +29,7 @@ class Task {
     this.location,
     this.reminderTime,
     this.imagePath,
+    this.muscleGroup,
   });
 
   Task copyWith({
@@ -42,6 +45,7 @@ class Task {
     String? location,
     DateTime? reminderTime,
     String? imagePath,
+    MuscleGroup? muscleGroup,
   }) {
     return Task(
       id: id ?? this.id,
@@ -56,6 +60,7 @@ class Task {
       location: location ?? this.location,
       reminderTime: reminderTime ?? this.reminderTime,
       imagePath: imagePath ?? this.imagePath,
+      muscleGroup: muscleGroup ?? this.muscleGroup,
     );
   }
 
@@ -73,6 +78,7 @@ class Task {
       'location': location,
       'reminderTime': reminderTime?.toIso8601String(),
       'imagePath': imagePath,
+      'muscleGroup': muscleGroup?.name,
     };
   }
 
@@ -97,6 +103,12 @@ class Task {
           ? DateTime.parse(json['reminderTime'] as String)
           : null,
       imagePath: json['imagePath'] as String?,
+      muscleGroup: json['muscleGroup'] != null
+          ? MuscleGroup.values.firstWhere(
+              (e) => e.name == json['muscleGroup'],
+              orElse: () => MuscleGroup.fullBody,
+            )
+          : null,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:voca_do/domain/models/task.dart';
 import 'package:voca_do/domain/models/task_type.dart';
+import 'package:voca_do/domain/models/muscle_group.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -26,6 +27,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
   String? _location;
   DateTime? _reminderTime;
   String? _imagePath;
+  MuscleGroup? _selectedMuscleGroup;
 
   @override
   void initState() {
@@ -39,6 +41,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
     _location = widget.task?.location;
     _reminderTime = widget.task?.reminderTime;
     _imagePath = widget.task?.imagePath;
+    _selectedMuscleGroup = widget.task?.muscleGroup;
   }
 
   @override
@@ -102,8 +105,6 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
     }
   }
 
- 
-
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source);
@@ -129,6 +130,33 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
           time.hour,
           time.minute,
         );
+      });
+    }
+  }
+
+  Future<void> _selectMuscleGroup() async {
+    final result = await showDialog<MuscleGroup>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Muscle Group'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: MuscleGroup.values.map((group) {
+              return ListTile(
+                leading: Icon(group.icon, color: group.color),
+                title: Text(group.label),
+                onTap: () => Navigator.pop(context, group),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedMuscleGroup = result;
       });
     }
   }
@@ -200,6 +228,18 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
               },
             ),
             const SizedBox(height: 16),
+            if (_selectedType.requiresMuscleGroup) ...[
+              ListTile(
+                title:
+                    Text(_selectedMuscleGroup?.label ?? 'Select Muscle Group'),
+                leading: Icon(
+                  _selectedMuscleGroup?.icon ?? Icons.fitness_center,
+                  color: _selectedMuscleGroup?.color ?? Colors.grey,
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: _selectMuscleGroup,
+              ),
+            ],
             if (_selectedType.requiresContact) ...[
               ListTile(
                 title: Text(_contactInfo ?? 'Select Contact'),
@@ -256,7 +296,6 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
                 ],
               ),
             ],
-          
             if (_selectedType.requiresTime) ...[
               ListTile(
                 title: Text(_reminderTime?.toString() ?? 'Set Reminder Time'),
@@ -283,6 +322,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
         location: _location,
         reminderTime: _reminderTime,
         imagePath: _imagePath,
+        muscleGroup: _selectedMuscleGroup,
       );
       Navigator.pop(context, task);
     }

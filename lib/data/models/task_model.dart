@@ -25,6 +25,15 @@ class TaskModel extends HiveObject {
   @HiveField(6)
   final String taskType;
 
+  @HiveField(7)
+  final String? muscleGroup;
+
+  @HiveField(8)
+  final String? description;
+
+  @HiveField(9)
+  final DateTime? reminderTime;
+
   TaskModel({
     required this.id,
     required this.title,
@@ -33,6 +42,9 @@ class TaskModel extends HiveObject {
     DateTime? createdAt,
     this.relatedTaskId,
     this.taskType = 'basic',
+    this.muscleGroup,
+    this.description,
+    this.reminderTime,
   }) : createdAt = createdAt ?? DateTime.now();
 
   TaskModel copyWith({
@@ -43,6 +55,9 @@ class TaskModel extends HiveObject {
     DateTime? createdAt,
     String? relatedTaskId,
     String? taskType,
+    String? muscleGroup,
+    String? description,
+    DateTime? reminderTime,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -52,6 +67,9 @@ class TaskModel extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       relatedTaskId: relatedTaskId ?? this.relatedTaskId,
       taskType: taskType ?? this.taskType,
+      muscleGroup: muscleGroup ?? this.muscleGroup,
+      description: description ?? this.description,
+      reminderTime: reminderTime ?? this.reminderTime,
     );
   }
 }

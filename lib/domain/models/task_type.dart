@@ -40,6 +40,12 @@ enum TaskType {
     label: 'Reminder',
     color: Colors.amber,
     requiresTime: true,
+  ),
+  workout(
+    icon: Icons.fitness_center,
+    label: 'Workout',
+    color: Colors.deepPurple,
+    requiresMuscleGroup: true,
   );
 
   final IconData icon;
@@ -49,6 +55,7 @@ enum TaskType {
   final bool requiresAppPackage;
   final bool requiresLocation;
   final bool requiresTime;
+  final bool requiresMuscleGroup;
 
   const TaskType({
     required this.icon,
@@ -58,6 +65,7 @@ enum TaskType {
     this.requiresAppPackage = false,
     this.requiresLocation = false,
     this.requiresTime = false,
+    this.requiresMuscleGroup = false,
   });
 
   FaIcon get faIcon => FaIcon(icon, color: color);

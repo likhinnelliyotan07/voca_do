@@ -10,8 +10,19 @@ class LoadTasks extends TaskEvent {}
 class AddTask extends TaskEvent {
   final String title;
   final DateTime? dueDate;
+  final String? description;
+  final String? taskType;
+  final String? muscleGroup;
+  final DateTime? reminderTime;
 
-  AddTask({required this.title, this.dueDate});
+  AddTask({
+    required this.title,
+    this.dueDate,
+    this.description,
+    this.taskType,
+    this.muscleGroup,
+    this.reminderTime,
+  });
 }
 
 class UpdateTask extends TaskEvent {
@@ -85,6 +96,10 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: event.title,
         dueDate: event.dueDate,
+        description: event.description,
+        taskType: event.taskType ?? 'basic',
+        muscleGroup: event.muscleGroup,
+        reminderTime: event.reminderTime,
       );
       await taskRepository.addTask(task);
       add(LoadTasks());

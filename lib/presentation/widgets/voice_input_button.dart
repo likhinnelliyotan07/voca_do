@@ -89,7 +89,6 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
       await _speechToText.listen(
         onResult: _onSpeechResult,
         localeId: 'en_US',
-        
         partialResults: true,
         cancelOnError: true,
       );
@@ -119,11 +118,21 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
     });
 
     if (result.finalResult) {
-      _processVoiceInput(_lastWords);
+      _processVoiceInput(_lastWords, context);
     }
   }
 
-  void _processVoiceInput(String input) {
+  void _processVoiceInput(String input, BuildContext context) {
+    if (input.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No voice input detected. Please try again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     // First try to handle as a command
     VoiceCommandHandler.handleCommand(input, context).then((_) {
       // If no command was handled, process as a task
@@ -131,58 +140,139 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
           !input.toLowerCase().contains('take picture') &&
           !input.toLowerCase().contains('open website') &&
           !input.toLowerCase().contains('set alarm')) {
-        final taskTitle = _extractTaskTitle(input);
-        final dueDate = _extractDueDate(input);
+        try {
+          // Check for workout command
+          if (input.toLowerCase().contains('workout')) {
+            final muscleGroup = _extractMuscleGroup(input) ?? "Full Body";
+            final taskTitle = _extractTaskTitle(input) ??
+                "Workout ${DateTime.now().millisecondsSinceEpoch}";
+            final dueDate = _extractDueDate(input);
+            final reminderTime = DateTime.now().add(const Duration(hours: 1));
 
-        if (taskTitle.isNotEmpty) {
-          context.read<TaskBloc>().add(AddTask(
-                title: taskTitle,
-                dueDate: dueDate,
-              ));
+            if (taskTitle.isNotEmpty) {
+              context.read<TaskBloc>().add(AddTask(
+                    title: taskTitle,
+                    dueDate: dueDate,
+                    taskType: 'workout',
+                    muscleGroup: muscleGroup,
+                    reminderTime: reminderTime,
+                  ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Workout task created successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+            return;
+          }
+
+          // Check for meeting command
+          if (input.toLowerCase().contains('meeting') ||
+              input.toLowerCase().contains('google meet') ||
+              input.toLowerCase().contains('meet')) {
+            final taskTitle = _extractTaskTitle(input) ??
+                "Meeting ${DateTime.now().millisecondsSinceEpoch}";
+            final dueDate = _extractDueDate(input);
+            final description = _extractMeetingDescription(input);
+            final reminderTime = DateTime.now().add(const Duration(hours: 1));
+
+            if (taskTitle.isNotEmpty) {
+              context.read<TaskBloc>().add(AddTask(
+                    title: taskTitle,
+                    dueDate: dueDate,
+                    description: description,
+                    reminderTime: reminderTime,
+                  ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Meeting task created successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+            return;
+          }
+
+          // Handle as regular task
+          final taskTitle = _extractTaskTitle(input) ??
+              "Task ${DateTime.now().millisecondsSinceEpoch}";
+          final dueDate = _extractDueDate(input);
+          final reminderTime = DateTime.now().add(const Duration(hours: 1));
+
+          if (taskTitle.isNotEmpty) {
+            context.read<TaskBloc>().add(AddTask(
+                  title: taskTitle,
+                  dueDate: dueDate,
+                  reminderTime: reminderTime,
+                ));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Task created successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to create task: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       }
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error processing voice input: ${error.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     });
   }
 
-  String _extractTaskTitle(String input) {
-    // Remove time-related phrases
-    final timePhrases = [
-      'by',
-      'at',
-      'tomorrow',
-      'today',
-      'next week',
-      'next month',
-    ];
+  String? _extractMuscleGroup(String input) {
+    final muscleGroups = {
+      'chest': 'chest',
+      'back': 'back',
+      'legs': 'legs',
+      'shoulders': 'shoulders',
+      'arms': 'arms',
+      'abs': 'abs',
+      'full body': 'fullBody',
+    };
 
-    String title = input;
-    for (final phrase in timePhrases) {
-      final index = title.toLowerCase().indexOf(phrase);
-      if (index != -1) {
-        title = title.substring(0, index).trim();
+    for (final entry in muscleGroups.entries) {
+      if (input.toLowerCase().contains(entry.key)) {
+        return entry.value;
       }
     }
+    return null;
+  }
 
-    return title;
+  String? _extractTaskTitle(String input) {
+    final titleMatch = RegExp(
+            r'(?:title|task|activity|event|meeting|workout|task|activity|event|meeting|workout)\s*"?([^"]+)"?')
+        .firstMatch(input);
+    return titleMatch?.group(1);
   }
 
   DateTime? _extractDueDate(String input) {
-    final now = DateTime.now();
-    final inputLower = input.toLowerCase();
-
-    // Check for "tomorrow"
-    if (inputLower.contains('tomorrow')) {
-      final tomorrow = now.add(const Duration(days: 1));
-      return _extractTime(inputLower, tomorrow);
+    final dateMatch = RegExp(
+            r'(?:due|date|when|on|at)\s*(\d{1,2}(?:st|nd|rd|th)? [A-Za-z]+|\d{4}-\d{2}-\d{2})')
+        .firstMatch(input);
+    if (dateMatch == null) return null;
+    try {
+      return DateTime.parse(dateMatch.group(1)!);
+    } catch (e) {
+      return null;
     }
+  }
 
-    // Check for "today"
-    if (inputLower.contains('today')) {
-      return _extractTime(inputLower, now);
-    }
-
-    // Check for time only
-    return _extractTime(inputLower, now);
+  String? _extractMeetingDescription(String input) {
+    final descMatch = RegExp(r'about ([^,\.]+)').firstMatch(input);
+    return descMatch?.group(1);
   }
 
   DateTime? _extractTime(String input, DateTime baseDate) {
@@ -215,44 +305,62 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        if (_isListening)
-          AnimatedBuilder(
-            animation: _waveformController,
-            builder: (context, child) {
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(5, (index) {
-                  final height = _waveformHeights[index] *
-                      (0.5 +
-                          0.5 *
-                              math.sin(_waveformController.value * 2 * math.pi +
-                                  index * 0.5));
-                  return Container(
-                    width: 4,
-                    height: height,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(2),
+    return GestureDetector(
+      onTapDown: (_) => _startListening(),
+      onTapUp: (_) => _stopListening(),
+      onTapCancel: () => _stopListening(),
+      child: Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Theme.of(context).colorScheme.primary,
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+              blurRadius: 8,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (_isListening)
+              AnimatedBuilder(
+                animation: _waveformController,
+                builder: (context, child) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      5,
+                      (index) => Container(
+                        width: 4,
+                        height: _waveformHeights[index] *
+                            (0.5 +
+                                0.5 *
+                                    math.sin(_waveformController.value *
+                                            math.pi *
+                                            2 +
+                                        index * 0.5)),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
                   );
-                }),
-              );
-            },
-          ),
-        FloatingActionButton(
-          onPressed: _isListening ? _stopListening : _startListening,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _isListening
-                ? const FaIcon(FontAwesomeIcons.stop)
-                : const FaIcon(FontAwesomeIcons.microphone),
-          ),
+                },
+              ),
+            Icon(
+              _isListening ? Icons.mic : Icons.mic_none,
+              color: Colors.white,
+              size: 32,
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
