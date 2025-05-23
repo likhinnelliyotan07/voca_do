@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
           child: Consumer<ThemeProvider>(
             builder: (context, themeProvider, child) {
               return MaterialApp(
-                title: 'VoiceTask AI',
+                title: 'VocaDO',
                 theme: themeProvider.currentTheme,
                 home: const SplashScreen(),
                 debugShowCheckedModeBanner: false,

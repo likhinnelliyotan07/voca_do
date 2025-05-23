@@ -23,18 +23,63 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   }
 
   void _initSpeech() async {
-    await _speechToText.initialize();
-    setState(() {});
+    try {
+      print('Initializing speech recognition...');
+      final bool available = await _speechToText.initialize(
+        onError: (error) {
+          print('Speech recognition error: $error');
+          setState(() {
+            _isListening = false;
+          });
+        },
+        onStatus: (status) {
+          print('Speech recognition status: $status');
+          if (status == 'done') {
+            setState(() {
+              _isListening = false;
+            });
+          }
+        },
+        debugLogging: true,
+      );
+      print('Speech recognition available: $available');
+      if (!available) {
+        print(
+            'Speech recognition not available - Please check permissions and device capabilities');
+      }
+      setState(() {});
+    } catch (e, stackTrace) {
+      print('Failed to initialize speech recognition: $e');
+      print('Stack trace: $stackTrace');
+    }
   }
 
   void _startListening() async {
-    await _speechToText.listen(
-      onResult: _onSpeechResult,
-      localeId: 'en_US',
-    );
-    setState(() {
-      _isListening = true;
-    });
+    if (!_speechToText.isAvailable) {
+      print(
+          'Speech recognition not available - Please check permissions and device capabilities');
+      return;
+    }
+
+    try {
+      print('Starting speech recognition...');
+      await _speechToText.listen(
+        onResult: _onSpeechResult,
+        localeId: 'en_US',
+        partialResults: true,
+        cancelOnError: true,
+      );
+      setState(() {
+        _isListening = true;
+      });
+      print('Speech recognition started successfully');
+    } catch (e, stackTrace) {
+      print('Error starting speech recognition: $e');
+      print('Stack trace: $stackTrace');
+      setState(() {
+        _isListening = false;
+      });
+    }
   }
 
   void _stopListening() async {

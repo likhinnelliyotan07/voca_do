@@ -6,6 +6,7 @@ import 'package:voca_do/presentation/widgets/task_list.dart';
 import 'package:voca_do/presentation/widgets/voice_input_button.dart';
 import 'package:voca_do/presentation/screens/settings_screen.dart';
 import 'package:voca_do/presentation/screens/calendar_screen.dart';
+import 'package:voca_do/presentation/screens/statistics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('VoiceTask AI'),
+        title: const Text('VocaDO'),
         actions: [
           IconButton(
             icon: const FaIcon(FontAwesomeIcons.gear),
@@ -45,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: const [
           TaskList(),
           CalendarScreen(),
-          Center(child: Text('Statistics - Coming Soon')),
+          StatisticsScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -55,17 +56,44 @@ class _HomeScreenState extends State<HomeScreen> {
             _currentIndex = index;
           });
         },
-        destinations: const [
+        height: 65,
+        elevation: 8,
+        surfaceTintColor: Theme.of(context).colorScheme.surface,
+        indicatorColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        animationDuration: const Duration(milliseconds: 500),
+        destinations: [
           NavigationDestination(
-            icon: FaIcon(FontAwesomeIcons.listCheck),
+            icon: FaIcon(
+              FontAwesomeIcons.listCheck,
+              color: Colors.grey,
+            ),
+            selectedIcon: FaIcon(
+              FontAwesomeIcons.listCheck,
+              color: Colors.blue,
+            ),
             label: 'Tasks',
           ),
           NavigationDestination(
-            icon: FaIcon(FontAwesomeIcons.calendar),
+            icon: FaIcon(
+              FontAwesomeIcons.calendar,
+              color: Colors.grey,
+            ),
+            selectedIcon: FaIcon(
+              FontAwesomeIcons.calendar,
+              color: Colors.blue,
+            ),
             label: 'Calendar',
           ),
           NavigationDestination(
-            icon: FaIcon(FontAwesomeIcons.chartBar),
+            icon: FaIcon(
+              FontAwesomeIcons.chartBar,
+              color: Colors.grey,
+            ),
+            selectedIcon: FaIcon(
+              FontAwesomeIcons.chartBar,
+              color: Colors.blue,
+            ),
             label: 'Stats',
           ),
         ],

@@ -12,14 +12,37 @@ class TaskList extends StatelessWidget {
     return BlocBuilder<TaskBloc, TaskState>(
       builder: (context, state) {
         if (state is TaskLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading tasks...',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+          );
         }
 
         if (state is TaskError) {
           return Center(
-            child: Text(
-              'Error: ${state.message}',
-              style: const TextStyle(color: Colors.red),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FaIcon(
+                  FontAwesomeIcons.triangleExclamation,
+                  size: 48,
+                  color: Colors.red.withOpacity(0.7),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error: ${state.message}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ],
             ),
           );
         }
@@ -58,7 +81,10 @@ class TaskList extends StatelessWidget {
             itemCount: state.tasks.length,
             itemBuilder: (context, index) {
               final task = state.tasks[index];
-              return TaskCard(task: task);
+              return AnimatedTaskCard(
+                task: task,
+                index: index,
+              );
             },
           );
         }
@@ -69,45 +95,141 @@ class TaskList extends StatelessWidget {
   }
 }
 
-class TaskCard extends StatelessWidget {
+class AnimatedTaskCard extends StatefulWidget {
   final TaskModel task;
+  final int index;
 
-  const TaskCard({super.key, required this.task});
+  const AnimatedTaskCard({
+    super.key,
+    required this.task,
+    required this.index,
+  });
+
+  @override
+  State<AnimatedTaskCard> createState() => _AnimatedTaskCardState();
+}
+
+class _AnimatedTaskCardState extends State<AnimatedTaskCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeIn,
+      ),
+    );
+
+    Future.delayed(Duration(milliseconds: widget.index * 100), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ListTile(
-        leading: Checkbox(
-          value: task.isCompleted,
-          onChanged: (value) {
-            context.read<TaskBloc>().add(ToggleTaskCompletion(task.id));
-          },
-        ),
-        title: Text(
-          task.title,
-          style: TextStyle(
-            decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-          ),
-        ),
-        subtitle: task.dueDate != null
-            ? Text(
-                'Due: ${_formatDateTime(task.dueDate!)}',
-                style: TextStyle(
-                  color: _isOverdue(task.dueDate!)
-                      ? Colors.red
-                      : Theme.of(context).colorScheme.secondary,
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                leading: Checkbox(
+                  value: widget.task.isCompleted,
+                  onChanged: (value) {
+                    context
+                        .read<TaskBloc>()
+                        .add(ToggleTaskCompletion(widget.task.id));
+                  },
                 ),
-              )
-            : null,
-        trailing: IconButton(
-          icon: const FaIcon(FontAwesomeIcons.trash),
-          onPressed: () {
-            context.read<TaskBloc>().add(DeleteTask(task.id));
-          },
-        ),
-      ),
+                title: Text(
+                  widget.task.title,
+                  style: TextStyle(
+                    decoration: widget.task.isCompleted
+                        ? TextDecoration.lineThrough
+                        : null,
+                  ),
+                ),
+                subtitle: widget.task.dueDate != null
+                    ? Row(
+                        children: [
+                          FaIcon(
+                            FontAwesomeIcons.clock,
+                            size: 12,
+                            color: _isOverdue(widget.task.dueDate!)
+                                ? Colors.red
+                                : Theme.of(context).colorScheme.secondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Due: ${_formatDateTime(widget.task.dueDate!)}',
+                            style: TextStyle(
+                              color: _isOverdue(widget.task.dueDate!)
+                                  ? Colors.red
+                                  : Theme.of(context).colorScheme.secondary,
+                            ),
+                          ),
+                        ],
+                      )
+                    : null,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: FaIcon(
+                        FontAwesomeIcons.penToSquare,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      onPressed: () {
+                        // TODO: Implement edit functionality
+                      },
+                    ),
+                    IconButton(
+                      icon: FaIcon(
+                        FontAwesomeIcons.trash,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      onPressed: () {
+                        context
+                            .read<TaskBloc>()
+                            .add(DeleteTask(widget.task.id));
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

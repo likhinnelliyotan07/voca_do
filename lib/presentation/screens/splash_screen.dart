@@ -74,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'VoiceTask AI',
+                      'VocaDO',
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 color: Theme.of(context).colorScheme.primary,
