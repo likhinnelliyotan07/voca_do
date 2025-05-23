@@ -115,23 +115,39 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
     }
   }
 
-  Future<void> _selectTime() async {
-    final time = await showTimePicker(
+  void _selectTime() async {
+    final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
     );
-    if (time != null) {
-      final now = DateTime.now();
+    if (picked != null) {
       setState(() {
+        final now = DateTime.now();
         _reminderTime = DateTime(
           now.year,
           now.month,
           now.day,
-          time.hour,
-          time.minute,
+          picked.hour,
+          picked.minute,
         );
       });
     }
+  }
+
+  void _selectApp() async {
+    // TODO: Implement app selection logic
+    // For now, we'll just set a dummy value
+    setState(() {
+      _appPackage = 'com.example.app';
+    });
+  }
+
+  void _selectLocation() async {
+    // TODO: Implement location selection logic
+    // For now, we'll just set a dummy value
+    setState(() {
+      _location = 'Current Location';
+    });
   }
 
   Future<void> _selectMuscleGroup() async {
@@ -228,6 +244,12 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
               },
             ),
             const SizedBox(height: 16),
+            ListTile(
+              title: Text(_reminderTime?.toString() ?? 'Set Reminder Time'),
+              trailing: const Icon(Icons.access_time),
+              onTap: _selectTime,
+            ),
+            const SizedBox(height: 16),
             if (_selectedType.requiresMuscleGroup) ...[
               ListTile(
                 title:
@@ -248,65 +270,54 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
               ),
             ],
             if (_selectedType.requiresAppPackage) ...[
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'App Package Name',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) => _appPackage = value,
-              ),
-            ],
-            if (_selectedType == TaskType.gallery ||
-                _selectedType == TaskType.camera) ...[
-              if (_imagePath != null) ...[
-                Container(
-                  height: 200,
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      File(_imagePath!),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.gallery),
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('Gallery'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _pickImage(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Camera'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            if (_selectedType.requiresTime) ...[
               ListTile(
-                title: Text(_reminderTime?.toString() ?? 'Set Reminder Time'),
-                trailing: const Icon(Icons.access_time),
-                onTap: _selectTime,
+                title: Text(_appPackage ?? 'Select App'),
+                trailing: const Icon(Icons.apps),
+                onTap: _selectApp,
+              ),
+            ],
+            if (_selectedType.requiresLocation) ...[
+              ListTile(
+                title: Text(_location ?? 'Select Location'),
+                trailing: const Icon(Icons.location_on),
+                onTap: _selectLocation,
+              ),
+            ],
+            const SizedBox(height: 16),
+            if (widget.task != null) ...[
+              const Divider(),
+              const SizedBox(height: 16),
+              Text(
+                'Task Details',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                title: const Text('Created At'),
+                subtitle: Text(_formatDateTime(widget.task!.createdAt)),
+              ),
+              if (widget.task!.completedAt != null)
+                ListTile(
+                  title: const Text('Completed At'),
+                  subtitle: Text(_formatDateTime(widget.task!.completedAt!)),
+                ),
+              ListTile(
+                title: const Text('Task ID'),
+                subtitle: Text(widget.task!.id),
               ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$month/$day $hour:$minute';
   }
 
   void _saveTask() {

@@ -259,15 +259,56 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
   }
 
   DateTime? _extractDueDate(String input) {
-    final dateMatch = RegExp(
-            r'(?:due|date|when|on|at)\s*(\d{1,2}(?:st|nd|rd|th)? [A-Za-z]+|\d{4}-\d{2}-\d{2})')
-        .firstMatch(input);
-    if (dateMatch == null) return null;
-    try {
-      return DateTime.parse(dateMatch.group(1)!);
-    } catch (e) {
-      return null;
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+
+    // Check for "tomorrow" keyword
+    if (input.toLowerCase().contains('tomorrow')) {
+      // Extract time if present
+      final timeMatch =
+          RegExp(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?', caseSensitive: false)
+              .firstMatch(input);
+      if (timeMatch != null) {
+        int hour = int.parse(timeMatch.group(1)!);
+        int minute =
+            timeMatch.group(2) != null ? int.parse(timeMatch.group(2)!) : 0;
+        String? period = timeMatch.group(3)?.toLowerCase();
+
+        // Convert to 24-hour format
+        if (period == 'pm' && hour < 12) hour += 12;
+        if (period == 'am' && hour == 12) hour = 0;
+
+        return DateTime(
+            tomorrow.year, tomorrow.month, tomorrow.day, hour, minute);
+      }
+      // If no time specified, set to tomorrow 12am
+      return DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
     }
+
+    // Check for specific time today
+    final timeMatch =
+        RegExp(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?', caseSensitive: false)
+            .firstMatch(input);
+    if (timeMatch != null) {
+      int hour = int.parse(timeMatch.group(1)!);
+      int minute =
+          timeMatch.group(2) != null ? int.parse(timeMatch.group(2)!) : 0;
+      String? period = timeMatch.group(3)?.toLowerCase();
+
+      // Convert to 24-hour format
+      if (period == 'pm' && hour < 12) hour += 12;
+      if (period == 'am' && hour == 12) hour = 0;
+
+      final dueDate = DateTime(now.year, now.month, now.day, hour, minute);
+      // If the time has already passed today, set it for tomorrow
+      if (dueDate.isBefore(now)) {
+        return DateTime(
+            tomorrow.year, tomorrow.month, tomorrow.day, hour, minute);
+      }
+      return dueDate;
+    }
+
+    return null;
   }
 
   String? _extractMeetingDescription(String input) {

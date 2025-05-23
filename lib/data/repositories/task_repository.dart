@@ -33,11 +33,18 @@ class TaskRepository {
   }
 
   Future<List<TaskModel>> getTasksByDate(DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
     return _taskBox.values
         .where((task) =>
-            task.dueDate?.year == date.year &&
-            task.dueDate?.month == date.month &&
-            task.dueDate?.day == date.day)
-        .toList();
+            task.dueDate != null &&
+            task.dueDate!.isAfter(startOfDay) &&
+            task.dueDate!.isBefore(endOfDay))
+        .toList()
+      ..sort((a, b) {
+        if (a.dueDate == null || b.dueDate == null) return 0;
+        return a.dueDate!.compareTo(b.dueDate!);
+      });
   }
 }

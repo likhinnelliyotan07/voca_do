@@ -222,45 +222,44 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
                           decoration: widget.task.isCompleted
                               ? TextDecoration.lineThrough
                               : null,
+                          fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (widget.task.taskType == 'workout' &&
                               widget.task.muscleGroup != null)
-                            Row(
-                              children: [
-                                Icon(
-                                  MuscleGroup.values
-                                      .firstWhere(
-                                        (group) =>
-                                            group.name ==
-                                            widget.task.muscleGroup,
-                                        orElse: () => MuscleGroup.fullBody,
-                                      )
-                                      .icon,
-                                  size: 12,
-                                  color: MuscleGroup.values
-                                      .firstWhere(
-                                        (group) =>
-                                            group.name ==
-                                            widget.task.muscleGroup,
-                                        orElse: () => MuscleGroup.fullBody,
-                                      )
-                                      .color,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  MuscleGroup.values
-                                      .firstWhere(
-                                        (group) =>
-                                            group.name ==
-                                            widget.task.muscleGroup,
-                                        orElse: () => MuscleGroup.fullBody,
-                                      )
-                                      .label,
-                                  style: TextStyle(
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: MuscleGroup.values
+                                    .firstWhere(
+                                      (group) =>
+                                          group.name == widget.task.muscleGroup,
+                                      orElse: () => MuscleGroup.fullBody,
+                                    )
+                                    .color
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    MuscleGroup.values
+                                        .firstWhere(
+                                          (group) =>
+                                              group.name ==
+                                              widget.task.muscleGroup,
+                                          orElse: () => MuscleGroup.fullBody,
+                                        )
+                                        .icon,
+                                    size: 12,
                                     color: MuscleGroup.values
                                         .firstWhere(
                                           (group) =>
@@ -270,34 +269,73 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
                                         )
                                         .color,
                                   ),
-                                ),
-                              ],
-                            ),
-                          if (widget.task.dueDate != null)
-                            Row(
-                              children: [
-                                FaIcon(
-                                  FontAwesomeIcons.clock,
-                                  size: 12,
-                                  color: _isOverdue(widget.task.dueDate!)
-                                      ? Colors.red
-                                      : Theme.of(context).colorScheme.secondary,
-                                ),
-                                const SizedBox(width: 4),
-                                SizedBox(
-                                  width: 120,
-                                  child: Text(
-                                    'Due: ${_formatDateTime(widget.task.dueDate!)}',
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    MuscleGroup.values
+                                        .firstWhere(
+                                          (group) =>
+                                              group.name ==
+                                              widget.task.muscleGroup,
+                                          orElse: () => MuscleGroup.fullBody,
+                                        )
+                                        .label,
                                     style: TextStyle(
-                                      color: _isOverdue(widget.task.dueDate!)
-                                          ? Colors.red
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .secondary,
+                                      color: MuscleGroup.values
+                                          .firstWhere(
+                                            (group) =>
+                                                group.name ==
+                                                widget.task.muscleGroup,
+                                            orElse: () => MuscleGroup.fullBody,
+                                          )
+                                          .color,
+                                      fontSize: 12,
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            ),
+                          if (widget.task.dueDate != null)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _isOverdue(widget.task.dueDate!)
+                                    ? Colors.red.withOpacity(0.1)
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .secondary
+                                        .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  FaIcon(
+                                    FontAwesomeIcons.clock,
+                                    size: 12,
+                                    color: _isOverdue(widget.task.dueDate!)
+                                        ? Colors.red
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .secondary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      _formatDateTime(widget.task.dueDate!),
+                                      style: TextStyle(
+                                        color: _isOverdue(widget.task.dueDate!)
+                                            ? Colors.red
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .secondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                         ],
                       ),
@@ -361,30 +399,94 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
                         ],
                       ),
                     ),
-                    if (_isExpanded &&
-                        widget.task.description != null &&
-                        widget.task.description!.isNotEmpty)
-                      Padding(
+                    if (_isExpanded)
+                      Container(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Divider(),
                             const SizedBox(height: 8),
+                            if (widget.task.description != null &&
+                                widget.task.description!.isNotEmpty) ...[
+                              Text(
+                                'Description',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceVariant
+                                      .withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  widget.task.description!,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             Text(
-                              'Description:',
+                              'Task Details',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
                                   ?.copyWith(
                                     color:
                                         Theme.of(context).colorScheme.secondary,
+                                    fontWeight: FontWeight.w600,
                                   ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              widget.task.description!,
-                              style: Theme.of(context).textTheme.bodyMedium,
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceVariant
+                                    .withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildDetailRow('Created At',
+                                      _formatDateTime(widget.task.createdAt)),
+                                  if (widget.task.dueDate != null)
+                                    _buildDetailRow('Due Date',
+                                        _formatDateTime(widget.task.dueDate!)),
+                                  if (widget.task.reminderTime != null)
+                                    _buildDetailRow(
+                                        'Reminder Time',
+                                        _formatDateTime(
+                                            widget.task.reminderTime!)),
+                                  if (widget.task.taskType != 'basic')
+                                    _buildDetailRow(
+                                        'Task Type', widget.task.taskType),
+                                  if (widget.task.muscleGroup != null)
+                                    _buildDetailRow('Muscle Group',
+                                        widget.task.muscleGroup!),
+                                  _buildDetailRow('Task ID', widget.task.id),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -411,13 +513,72 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
     } else if (taskDate == tomorrow) {
       prefix = 'Tomorrow';
     } else {
-      prefix = '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+      prefix =
+          '${_getMonthName(dateTime.month)} ${dateTime.day}, ${dateTime.year}';
     }
 
-    return '$prefix at ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    final hour = dateTime.hour > 12
+        ? dateTime.hour - 12
+        : (dateTime.hour == 0 ? 12 : dateTime.hour);
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+    final timeStr =
+        '$hour:${dateTime.minute.toString().padLeft(2, '0')} $period';
+
+    return '$prefix at $timeStr';
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return months[month - 1];
   }
 
   bool _isOverdue(DateTime dueDate) {
     return dueDate.isBefore(DateTime.now());
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Flexible(
+            flex: 2,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 3,
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w400,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

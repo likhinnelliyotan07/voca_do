@@ -92,10 +92,14 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
 
   Future<void> _onAddTask(AddTask event, Emitter<TaskState> emit) async {
     try {
+      final now = DateTime.now();
+      final defaultDueDate = event.dueDate ?? now.add(const Duration(hours: 1));
+      final formattedTitle = '${event.title} (${_formatDateTime(now)})';
+
       final task = TaskModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: event.title,
-        dueDate: event.dueDate,
+        title: formattedTitle,
+        dueDate: defaultDueDate,
         description: event.description,
         taskType: event.taskType ?? 'basic',
         muscleGroup: event.muscleGroup,
@@ -107,6 +111,14 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     } catch (e) {
       emit(TaskError(e.toString()));
     }
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final month = dateTime.month.toString().padLeft(2, '0');
+    final day = dateTime.day.toString().padLeft(2, '0');
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '$month/$day $hour:$minute';
   }
 
   Future<void> _onUpdateTask(UpdateTask event, Emitter<TaskState> emit) async {
