@@ -5,6 +5,7 @@ import 'package:voca_do/presentation/blocs/task_bloc.dart';
 import 'package:voca_do/presentation/widgets/task_list.dart';
 import 'package:voca_do/presentation/widgets/voice_input_button.dart';
 import 'package:voca_do/presentation/screens/settings_screen.dart';
+import 'package:voca_do/presentation/screens/calendar_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: const [
           TaskList(),
-          Center(child: Text('Calendar View - Coming Soon')),
+          CalendarScreen(),
           Center(child: Text('Statistics - Coming Soon')),
         ],
       ),
