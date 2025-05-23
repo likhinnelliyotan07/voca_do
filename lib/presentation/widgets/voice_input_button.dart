@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:voca_do/presentation/blocs/task_bloc.dart';
+import 'package:voca_do/presentation/services/voice_command_handler.dart';
+import 'dart:math' as math;
 
 class VoiceInputButton extends StatefulWidget {
   const VoiceInputButton({super.key});
@@ -11,15 +13,36 @@ class VoiceInputButton extends StatefulWidget {
   State<VoiceInputButton> createState() => _VoiceInputButtonState();
 }
 
-class _VoiceInputButtonState extends State<VoiceInputButton> {
+class _VoiceInputButtonState extends State<VoiceInputButton>
+    with SingleTickerProviderStateMixin {
   final SpeechToText _speechToText = SpeechToText();
   bool _isListening = false;
   String _lastWords = '';
+  late AnimationController _waveformController;
+  late List<double> _waveformHeights;
 
   @override
   void initState() {
     super.initState();
     _initSpeech();
+    _initWaveformAnimation();
+  }
+
+  void _initWaveformAnimation() {
+    _waveformController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat();
+
+    // Generate random waveform heights
+    _waveformHeights =
+        List.generate(5, (index) => math.Random().nextDouble() * 20 + 10);
+  }
+
+  @override
+  void dispose() {
+    _waveformController.dispose();
+    super.dispose();
   }
 
   void _initSpeech() async {
@@ -66,6 +89,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       await _speechToText.listen(
         onResult: _onSpeechResult,
         localeId: 'en_US',
+        
         partialResults: true,
         cancelOnError: true,
       );
@@ -100,16 +124,24 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
   }
 
   void _processVoiceInput(String input) {
-    // Extract task title and due date
-    final taskTitle = _extractTaskTitle(input);
-    final dueDate = _extractDueDate(input);
+    // First try to handle as a command
+    VoiceCommandHandler.handleCommand(input, context).then((_) {
+      // If no command was handled, process as a task
+      if (!input.toLowerCase().contains('open') &&
+          !input.toLowerCase().contains('take picture') &&
+          !input.toLowerCase().contains('open website') &&
+          !input.toLowerCase().contains('set alarm')) {
+        final taskTitle = _extractTaskTitle(input);
+        final dueDate = _extractDueDate(input);
 
-    if (taskTitle.isNotEmpty) {
-      context.read<TaskBloc>().add(AddTask(
-            title: taskTitle,
-            dueDate: dueDate,
-          ));
-    }
+        if (taskTitle.isNotEmpty) {
+          context.read<TaskBloc>().add(AddTask(
+                title: taskTitle,
+                dueDate: dueDate,
+              ));
+        }
+      }
+    });
   }
 
   String _extractTaskTitle(String input) {
@@ -183,14 +215,44 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton(
-      onPressed: _isListening ? _stopListening : _startListening,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
-        child: _isListening
-            ? const FaIcon(FontAwesomeIcons.stop)
-            : const FaIcon(FontAwesomeIcons.microphone),
-      ),
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (_isListening)
+          AnimatedBuilder(
+            animation: _waveformController,
+            builder: (context, child) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(5, (index) {
+                  final height = _waveformHeights[index] *
+                      (0.5 +
+                          0.5 *
+                              math.sin(_waveformController.value * 2 * math.pi +
+                                  index * 0.5));
+                  return Container(
+                    width: 4,
+                    height: height,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+        FloatingActionButton(
+          onPressed: _isListening ? _stopListening : _startListening,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _isListening
+                ? const FaIcon(FontAwesomeIcons.stop)
+                : const FaIcon(FontAwesomeIcons.microphone),
+          ),
+        ),
+      ],
     );
   }
 }

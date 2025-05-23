@@ -3,94 +3,111 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:voca_do/data/models/task_model.dart';
 import 'package:voca_do/presentation/blocs/task_bloc.dart';
+import 'package:voca_do/presentation/screens/task_edit_screen.dart';
+import 'package:voca_do/domain/models/task.dart';
+import 'package:voca_do/domain/models/task_type.dart';
 
 class TaskList extends StatelessWidget {
   const TaskList({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<TaskBloc, TaskState>(
-      builder: (context, state) {
-        if (state is TaskLoading) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                Text(
-                  'Loading tasks...',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
+    return BlocListener<TaskBloc, TaskState>(
+      listener: (context, state) {
+        if (state is TaskMessage) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              duration: const Duration(seconds: 2),
             ),
           );
         }
-
-        if (state is TaskError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FaIcon(
-                  FontAwesomeIcons.triangleExclamation,
-                  size: 48,
-                  color: Colors.red.withOpacity(0.7),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Error: ${state.message}',
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ],
-            ),
-          );
-        }
-
-        if (state is TaskLoaded) {
-          if (state.tasks.isEmpty) {
+      },
+      child: BlocBuilder<TaskBloc, TaskState>(
+        builder: (context, state) {
+          if (state is TaskLoading) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  FaIcon(
-                    FontAwesomeIcons.listCheck,
-                    size: 64,
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                  ),
+                  const CircularProgressIndicator(),
                   const SizedBox(height: 16),
                   Text(
-                    'No tasks yet',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap the microphone to add a task',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
+                    'Loading tasks...',
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],
               ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: state.tasks.length,
-            itemBuilder: (context, index) {
-              final task = state.tasks[index];
-              return AnimatedTaskCard(
-                task: task,
-                index: index,
-              );
-            },
-          );
-        }
+          if (state is TaskError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  FaIcon(
+                    FontAwesomeIcons.triangleExclamation,
+                    size: 48,
+                    color: Colors.red.withOpacity(0.7),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error: ${state.message}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ],
+              ),
+            );
+          }
 
-        return const SizedBox.shrink();
-      },
+          if (state is TaskLoaded) {
+            if (state.tasks.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    FaIcon(
+                      FontAwesomeIcons.listCheck,
+                      size: 64,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No tasks yet',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap the microphone to add a task',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.secondary,
+                          ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: state.tasks.length,
+              itemBuilder: (context, index) {
+                final task = state.tasks[index];
+                return AnimatedTaskCard(
+                  task: task,
+                  index: index,
+                );
+              },
+            );
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
     );
   }
 }
@@ -162,13 +179,22 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
             child: Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ListTile(
-                leading: Checkbox(
-                  value: widget.task.isCompleted,
-                  onChanged: (value) {
-                    context
-                        .read<TaskBloc>()
-                        .add(ToggleTaskCompletion(widget.task.id));
-                  },
+                leading: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: widget.task.isCompleted,
+                      onChanged: (value) {
+                        context
+                            .read<TaskBloc>()
+                            .add(ToggleTaskCompletion(widget.task.id));
+                      },
+                    ),
+                    Icon(
+                      TaskType.basic.icon,
+                      color: TaskType.basic.color,
+                    ),
+                  ],
                 ),
                 title: Text(
                   widget.task.title,
@@ -189,12 +215,15 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
                                 : Theme.of(context).colorScheme.secondary,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            'Due: ${_formatDateTime(widget.task.dueDate!)}',
-                            style: TextStyle(
-                              color: _isOverdue(widget.task.dueDate!)
-                                  ? Colors.red
-                                  : Theme.of(context).colorScheme.secondary,
+                          SizedBox(
+                            width: 120,
+                            child: Text(
+                              'Due: ${_formatDateTime(widget.task.dueDate!)}',
+                              style: TextStyle(
+                                color: _isOverdue(widget.task.dueDate!)
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.secondary,
+                              ),
                             ),
                           ),
                         ],
@@ -208,8 +237,40 @@ class _AnimatedTaskCardState extends State<AnimatedTaskCard>
                         FontAwesomeIcons.penToSquare,
                         color: Theme.of(context).colorScheme.primary,
                       ),
-                      onPressed: () {
-                        // TODO: Implement edit functionality
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TaskEditScreen(
+                              task: Task(
+                                id: widget.task.id,
+                                title: widget.task.title,
+                                description: '',
+                                createdAt: widget.task.createdAt,
+                                type: TaskType.basic,
+                              ),
+                            ),
+                          ),
+                        );
+                        if (result != null) {
+                          context.read<TaskBloc>().add(
+                                UpdateTask(
+                                  TaskModel(
+                                    id: result.id,
+                                    title: result.title,
+                                    dueDate: widget.task.dueDate,
+                                    isCompleted: widget.task.isCompleted,
+                                    createdAt: result.createdAt,
+                                  ),
+                                ),
+                              );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Task updated successfully'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       },
                     ),
                     IconButton(

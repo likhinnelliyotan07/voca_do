@@ -3,7 +3,7 @@ import 'package:voca_do/domain/models/task.dart';
 import 'package:voca_do/domain/models/task_type.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
+
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 
@@ -102,21 +102,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    final status = await Permission.location.request();
-    if (status.isGranted) {
-      try {
-        final position = await Geolocator.getCurrentPosition();
-        setState(() {
-          _location = '${position.latitude},${position.longitude}';
-        });
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not get location')),
-        );
-      }
-    }
-  }
+ 
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
@@ -270,13 +256,7 @@ class _TaskEditScreenState extends State<TaskEditScreen> {
                 ],
               ),
             ],
-            if (_selectedType.requiresLocation) ...[
-              ListTile(
-                title: Text(_location ?? 'Get Current Location'),
-                trailing: const Icon(Icons.location_on),
-                onTap: _getCurrentLocation,
-              ),
-            ],
+          
             if (_selectedType.requiresTime) ...[
               ListTile(
                 title: Text(_reminderTime?.toString() ?? 'Set Reminder Time'),

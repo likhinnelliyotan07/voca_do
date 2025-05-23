@@ -51,6 +51,12 @@ class TaskError extends TaskState {
   TaskError(this.message);
 }
 
+class TaskMessage extends TaskState {
+  final String message;
+
+  TaskMessage(this.message);
+}
+
 // Bloc
 class TaskBloc extends Bloc<TaskEvent, TaskState> {
   final TaskRepository taskRepository;
@@ -82,6 +88,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       );
       await taskRepository.addTask(task);
       add(LoadTasks());
+      emit(TaskMessage('Task added successfully'));
     } catch (e) {
       emit(TaskError(e.toString()));
     }
@@ -91,6 +98,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     try {
       await taskRepository.updateTask(event.task);
       add(LoadTasks());
+      emit(TaskMessage('Task updated successfully'));
     } catch (e) {
       emit(TaskError(e.toString()));
     }
@@ -100,6 +108,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     try {
       await taskRepository.deleteTask(event.id);
       add(LoadTasks());
+      emit(TaskMessage('Task deleted successfully'));
     } catch (e) {
       emit(TaskError(e.toString()));
     }
@@ -110,6 +119,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     try {
       await taskRepository.toggleTaskCompletion(event.id);
       add(LoadTasks());
+      emit(TaskMessage('Task status updated'));
     } catch (e) {
       emit(TaskError(e.toString()));
     }

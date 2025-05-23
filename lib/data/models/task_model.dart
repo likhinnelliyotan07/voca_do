@@ -19,12 +19,20 @@ class TaskModel extends HiveObject {
   @HiveField(4)
   final DateTime createdAt;
 
+  @HiveField(5)
+  final String? relatedTaskId;
+
+  @HiveField(6)
+  final String taskType;
+
   TaskModel({
     required this.id,
     required this.title,
     this.dueDate,
     this.isCompleted = false,
     DateTime? createdAt,
+    this.relatedTaskId,
+    this.taskType = 'basic',
   }) : createdAt = createdAt ?? DateTime.now();
 
   TaskModel copyWith({
@@ -33,6 +41,8 @@ class TaskModel extends HiveObject {
     DateTime? dueDate,
     bool? isCompleted,
     DateTime? createdAt,
+    String? relatedTaskId,
+    String? taskType,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -40,6 +50,8 @@ class TaskModel extends HiveObject {
       dueDate: dueDate ?? this.dueDate,
       isCompleted: isCompleted ?? this.isCompleted,
       createdAt: createdAt ?? this.createdAt,
+      relatedTaskId: relatedTaskId ?? this.relatedTaskId,
+      taskType: taskType ?? this.taskType,
     );
   }
 }
