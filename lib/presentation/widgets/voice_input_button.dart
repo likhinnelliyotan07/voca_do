@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:voca_do/presentation/blocs/task_bloc.dart';
 import 'package:voca_do/presentation/services/voice_command_handler.dart';
 import 'dart:math' as math;
 
 class VoiceInputButton extends StatefulWidget {
-  const VoiceInputButton({super.key});
+  final double size;
+  final bool showWaveform;
+  final bool showIcon;
+
+  const VoiceInputButton({
+    super.key,
+    this.size = 80,
+    this.showWaveform = true,
+    this.showIcon = true,
+  });
 
   @override
   State<VoiceInputButton> createState() => _VoiceInputButtonState();
@@ -339,34 +347,6 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
     return descMatch?.group(1);
   }
 
-  DateTime? _extractTime(String input, DateTime baseDate) {
-    final timeRegex =
-        RegExp(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?', caseSensitive: false);
-    final match = timeRegex.firstMatch(input);
-
-    if (match != null) {
-      int hour = int.parse(match.group(1)!);
-      int minute = match.group(2) != null ? int.parse(match.group(2)!) : 0;
-      final period = match.group(3)?.toLowerCase();
-
-      if (period == 'pm' && hour < 12) {
-        hour += 12;
-      } else if (period == 'am' && hour == 12) {
-        hour = 0;
-      }
-
-      return DateTime(
-        baseDate.year,
-        baseDate.month,
-        baseDate.day,
-        hour,
-        minute,
-      );
-    }
-
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -374,8 +354,8 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
       onTapUp: (_) => _stopListening(),
       onTapCancel: () => _stopListening(),
       child: Container(
-        width: 80,
-        height: 80,
+        width: widget.size,
+        height: widget.size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: Theme.of(context).colorScheme.primary,
@@ -390,7 +370,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
         child: Stack(
           alignment: Alignment.center,
           children: [
-            if (_isListening)
+            if (_isListening && widget.showWaveform)
               AnimatedBuilder(
                 animation: _waveformController,
                 builder: (context, child) {
@@ -417,11 +397,12 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
                   );
                 },
               ),
-            Icon(
-              _isListening ? Icons.mic : Icons.mic_none,
-              color: Colors.white,
-              size: 32,
-            ),
+            if (widget.showIcon)
+              Icon(
+                _isListening ? Icons.mic : Icons.mic_none,
+                color: Colors.white,
+                size: widget.size * 0.4,
+              ),
           ],
         ),
       ),

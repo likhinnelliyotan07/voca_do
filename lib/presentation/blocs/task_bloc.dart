@@ -45,6 +45,48 @@ class ToggleTaskCompletion extends TaskEvent {
   ToggleTaskCompletion(this.id);
 }
 
+class MarkTaskComplete extends TaskEvent {
+  final String taskTitle;
+
+  MarkTaskComplete({required this.taskTitle});
+}
+
+class UpdateSearchQuery extends TaskEvent {
+  final String query;
+
+  UpdateSearchQuery(this.query);
+}
+
+class UpdateTaskTypeFilter extends TaskEvent {
+  final String? taskType;
+
+  UpdateTaskTypeFilter(this.taskType);
+}
+
+class UpdateShowCompletedFilter extends TaskEvent {
+  final bool showCompleted;
+
+  UpdateShowCompletedFilter(this.showCompleted);
+}
+
+class UpdateDueDateFilter extends TaskEvent {
+  final String? filter;
+
+  UpdateDueDateFilter(this.filter);
+}
+
+class UpdateMuscleGroupFilter extends TaskEvent {
+  final String? filter;
+
+  UpdateMuscleGroupFilter(this.filter);
+}
+
+class UpdateSortBy extends TaskEvent {
+  final String sortBy;
+
+  UpdateSortBy(this.sortBy);
+}
+
 // States
 abstract class TaskState {}
 
@@ -54,8 +96,22 @@ class TaskLoading extends TaskState {}
 
 class TaskLoaded extends TaskState {
   final List<TaskModel> tasks;
+  final String searchQuery;
+  final String? taskTypeFilter;
+  final bool showCompleted;
+  final String? dueDateFilter;
+  final String? muscleGroupFilter;
+  final String sortBy;
 
-  TaskLoaded(this.tasks);
+  TaskLoaded({
+    required this.tasks,
+    this.searchQuery = '',
+    this.taskTypeFilter,
+    this.showCompleted = true,
+    this.dueDateFilter,
+    this.muscleGroupFilter,
+    this.sortBy = 'dueDate',
+  });
 }
 
 class TaskError extends TaskState {
@@ -73,6 +129,12 @@ class TaskMessage extends TaskState {
 // Bloc
 class TaskBloc extends Bloc<TaskEvent, TaskState> {
   final TaskRepository taskRepository;
+  String _searchQuery = '';
+  String? _taskTypeFilter;
+  bool _showCompleted = true;
+  String? _dueDateFilter;
+  String? _muscleGroupFilter;
+  String _sortBy = 'dueDate';
 
   TaskBloc({required this.taskRepository}) : super(TaskInitial()) {
     on<LoadTasks>(_onLoadTasks);
@@ -80,13 +142,28 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     on<UpdateTask>(_onUpdateTask);
     on<DeleteTask>(_onDeleteTask);
     on<ToggleTaskCompletion>(_onToggleTaskCompletion);
+    on<MarkTaskComplete>(_onMarkTaskComplete);
+    on<UpdateSearchQuery>(_onUpdateSearchQuery);
+    on<UpdateTaskTypeFilter>(_onUpdateTaskTypeFilter);
+    on<UpdateShowCompletedFilter>(_onUpdateShowCompletedFilter);
+    on<UpdateDueDateFilter>(_onUpdateDueDateFilter);
+    on<UpdateMuscleGroupFilter>(_onUpdateMuscleGroupFilter);
+    on<UpdateSortBy>(_onUpdateSortBy);
   }
 
   Future<void> _onLoadTasks(LoadTasks event, Emitter<TaskState> emit) async {
     try {
       emit(TaskLoading());
       final tasks = await taskRepository.getAllTasks();
-      emit(TaskLoaded(tasks));
+      emit(TaskLoaded(
+        tasks: tasks,
+        searchQuery: _searchQuery,
+        taskTypeFilter: _taskTypeFilter,
+        showCompleted: _showCompleted,
+        dueDateFilter: _dueDateFilter,
+        muscleGroupFilter: _muscleGroupFilter,
+        sortBy: _sortBy,
+      ));
     } catch (e) {
       emit(TaskError(e.toString()));
     }
@@ -190,5 +267,111 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     } catch (e) {
       emit(TaskError(e.toString()));
     }
+  }
+
+  Future<void> _onMarkTaskComplete(
+      MarkTaskComplete event, Emitter<TaskState> emit) async {
+    try {
+      final tasks = await taskRepository.getAllTasks();
+      final task = tasks.firstWhere(
+        (t) => t.title.toLowerCase() == event.taskTitle.toLowerCase(),
+        orElse: () => throw Exception('Task not found'),
+      );
+      await taskRepository.toggleTaskCompletion(task.id);
+      add(LoadTasks());
+      emit(TaskMessage('Task marked as complete'));
+    } catch (e) {
+      emit(TaskError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateSearchQuery(
+      UpdateSearchQuery event, Emitter<TaskState> emit) async {
+    _searchQuery = event.query;
+    final tasks = await taskRepository.getAllTasks();
+    emit(TaskLoaded(
+      tasks: tasks,
+      searchQuery: _searchQuery,
+      taskTypeFilter: _taskTypeFilter,
+      showCompleted: _showCompleted,
+      dueDateFilter: _dueDateFilter,
+      muscleGroupFilter: _muscleGroupFilter,
+      sortBy: _sortBy,
+    ));
+  }
+
+  Future<void> _onUpdateTaskTypeFilter(
+      UpdateTaskTypeFilter event, Emitter<TaskState> emit) async {
+    _taskTypeFilter = event.taskType;
+    final tasks = await taskRepository.getAllTasks();
+    emit(TaskLoaded(
+      tasks: tasks,
+      searchQuery: _searchQuery,
+      taskTypeFilter: _taskTypeFilter,
+      showCompleted: _showCompleted,
+      dueDateFilter: _dueDateFilter,
+      muscleGroupFilter: _muscleGroupFilter,
+      sortBy: _sortBy,
+    ));
+  }
+
+  Future<void> _onUpdateShowCompletedFilter(
+      UpdateShowCompletedFilter event, Emitter<TaskState> emit) async {
+    _showCompleted = event.showCompleted;
+    final tasks = await taskRepository.getAllTasks();
+    emit(TaskLoaded(
+      tasks: tasks,
+      searchQuery: _searchQuery,
+      taskTypeFilter: _taskTypeFilter,
+      showCompleted: _showCompleted,
+      dueDateFilter: _dueDateFilter,
+      muscleGroupFilter: _muscleGroupFilter,
+      sortBy: _sortBy,
+    ));
+  }
+
+  Future<void> _onUpdateDueDateFilter(
+      UpdateDueDateFilter event, Emitter<TaskState> emit) async {
+    _dueDateFilter = event.filter;
+    final tasks = await taskRepository.getAllTasks();
+    emit(TaskLoaded(
+      tasks: tasks,
+      searchQuery: _searchQuery,
+      taskTypeFilter: _taskTypeFilter,
+      showCompleted: _showCompleted,
+      dueDateFilter: _dueDateFilter,
+      muscleGroupFilter: _muscleGroupFilter,
+      sortBy: _sortBy,
+    ));
+  }
+
+  Future<void> _onUpdateMuscleGroupFilter(
+      UpdateMuscleGroupFilter event, Emitter<TaskState> emit) async {
+    _muscleGroupFilter = event.filter;
+    final tasks = await taskRepository.getAllTasks();
+    emit(TaskLoaded(
+      tasks: tasks,
+      searchQuery: _searchQuery,
+      taskTypeFilter: _taskTypeFilter,
+      showCompleted: _showCompleted,
+      dueDateFilter: _dueDateFilter,
+      muscleGroupFilter: _muscleGroupFilter,
+      sortBy: _sortBy,
+    ));
+  }
+
+  Future<void> _onUpdateSortBy(
+      UpdateSortBy event, Emitter<TaskState> emit) async {
+    _sortBy = event.sortBy;
+    final tasks = await taskRepository.getAllTasks();
+    emit(TaskLoaded(
+      tasks: tasks,
+      searchQuery: _searchQuery,
+      taskTypeFilter: _taskTypeFilter,
+      showCompleted: _showCompleted,
+      dueDateFilter: _dueDateFilter,
+      muscleGroupFilter: _muscleGroupFilter,
+      sortBy: _sortBy,
+    ));
   }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:voca_do/presentation/blocs/task_bloc.dart';
-import 'package:voca_do/presentation/widgets/task_list.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -32,7 +31,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           end: Alignment.bottomCenter,
           colors: [
             Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            Theme.of(context).colorScheme.background,
+            Theme.of(context).colorScheme.surface,
           ],
         ),
       ),
@@ -138,7 +137,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               fontSize: 16,
                               color: Theme.of(context)
                                   .colorScheme
-                                  .onBackground
+                                  .onSurface
                                   .withOpacity(0.7),
                             ),
                           ),
@@ -187,7 +186,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               color: task.isCompleted
                                   ? Theme.of(context)
                                       .colorScheme
-                                      .onBackground
+                                      .onSurface
                                       .withOpacity(0.6)
                                   : null,
                             ),
