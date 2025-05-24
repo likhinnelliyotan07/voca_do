@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:voca_do/data/models/task_model.dart';
 import 'package:voca_do/data/repositories/task_repository.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 // Events
 abstract class TaskEvent {}
@@ -94,7 +96,21 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     try {
       final now = DateTime.now();
       final defaultDueDate = event.dueDate ?? now.add(const Duration(hours: 1));
-      final formattedTitle = '${event.title} (${_formatDateTime(now)})';
+
+      // Set reminder time 5 minutes before due time
+      final reminderTime = defaultDueDate.subtract(const Duration(minutes: 5));
+
+      // Format title based on task type
+      String formattedTitle = event.title;
+      if (event.taskType == 'workout') {
+        // For workout tasks, format as "Workout - {Muscle Group}"
+        final muscleGroup =
+            event.muscleGroup?.toString().split('.').last ?? 'Full Body';
+        formattedTitle = 'Workout - $muscleGroup';
+      } else if (event.taskType == 'meeting') {
+        // For meeting tasks, format as "{Title} Meeting"
+        formattedTitle = '${event.title} Meeting';
+      }
 
       final task = TaskModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -103,8 +119,32 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
         description: event.description,
         taskType: event.taskType ?? 'basic',
         muscleGroup: event.muscleGroup,
-        reminderTime: event.reminderTime,
+        reminderTime: reminderTime,
       );
+
+      // Schedule notification for the task
+      final FlutterLocalNotificationsPlugin notifications =
+          FlutterLocalNotificationsPlugin();
+      final scheduledTzTime = tz.TZDateTime.from(reminderTime, tz.local);
+
+      await notifications.zonedSchedule(
+        task.id.hashCode, // Use task ID as notification ID
+        formattedTitle,
+        event.description ?? 'Time for your scheduled task!',
+        scheduledTzTime,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'task_channel',
+            'Tasks',
+            importance: Importance.high,
+            priority: Priority.high,
+            enableVibration: true,
+            playSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+
       await taskRepository.addTask(task);
       add(LoadTasks());
       emit(TaskMessage('Task added successfully'));

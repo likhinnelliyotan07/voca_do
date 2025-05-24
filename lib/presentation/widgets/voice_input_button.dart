@@ -144,8 +144,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
           // Check for workout command
           if (input.toLowerCase().contains('workout')) {
             final muscleGroup = _extractMuscleGroup(input) ?? "Full Body";
-            final taskTitle = _extractTaskTitle(input) ??
-                "Workout ${DateTime.now().millisecondsSinceEpoch}";
+            final taskTitle = _extractTaskTitle(input) ?? "Workout";
             final dueDate = _extractDueDate(input);
             final reminderTime = DateTime.now().add(const Duration(hours: 1));
 
@@ -171,8 +170,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
           if (input.toLowerCase().contains('meeting') ||
               input.toLowerCase().contains('google meet') ||
               input.toLowerCase().contains('meet')) {
-            final taskTitle = _extractTaskTitle(input) ??
-                "Meeting ${DateTime.now().millisecondsSinceEpoch}";
+            final taskTitle = _extractTaskTitle(input) ?? "Client";
             final dueDate = _extractDueDate(input);
             final description = _extractMeetingDescription(input);
             final reminderTime = DateTime.now().add(const Duration(hours: 1));
@@ -182,6 +180,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
                     title: taskTitle,
                     dueDate: dueDate,
                     description: description,
+                    taskType: 'meeting',
                     reminderTime: reminderTime,
                   ));
               ScaffoldMessenger.of(context).showSnackBar(
@@ -195,8 +194,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
           }
 
           // Handle as regular task
-          final taskTitle = _extractTaskTitle(input) ??
-              "Task ${DateTime.now().millisecondsSinceEpoch}";
+          final taskTitle = _extractTaskTitle(input) ?? "Task";
           final dueDate = _extractDueDate(input);
           final reminderTime = DateTime.now().add(const Duration(hours: 1));
 
@@ -252,10 +250,35 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
   }
 
   String? _extractTaskTitle(String input) {
-    final titleMatch = RegExp(
-            r'(?:title|task|activity|event|meeting|workout|task|activity|event|meeting|workout)\s*"?([^"]+)"?')
-        .firstMatch(input);
-    return titleMatch?.group(1);
+    // Try different patterns to extract task title
+    final patterns = [
+      r'(?:title|task|activity|event|meeting|workout)\s*(?:called|about|for|with)?\s*"?([^"]+)"?', // task with client
+      r'(?:with|about|for)\s*"?([^"]+)"?\s*(?:meeting|task|activity|event|workout)', // with client meeting
+      r'(?:schedule|create|add)\s*(?:a|an)?\s*(?:meeting|task|activity|event|workout)\s*(?:with|about|for)?\s*"?([^"]+)"?', // schedule meeting with client
+    ];
+
+    for (final pattern in patterns) {
+      final match = RegExp(pattern, caseSensitive: false).firstMatch(input);
+      if (match != null && match.group(1) != null) {
+        return match.group(1)!.trim();
+      }
+    }
+
+    // If no specific title found, try to extract any meaningful phrase
+    final words = input.split(' ');
+    final taskIndex = words.indexWhere((word) =>
+        word.toLowerCase() == 'meeting' ||
+        word.toLowerCase() == 'task' ||
+        word.toLowerCase() == 'workout' ||
+        word.toLowerCase() == 'schedule' ||
+        word.toLowerCase() == 'create');
+
+    if (taskIndex != -1 && taskIndex < words.length - 1) {
+      // Get the next word after task keyword as the title
+      return words[taskIndex + 1].trim();
+    }
+
+    return null;
   }
 
   DateTime? _extractDueDate(String input) {

@@ -21,64 +21,88 @@ class VoiceCommandHandler {
     // Initialize timezone
     tz.initializeTimeZones();
 
-    // Request exact alarm permission
-    if (await Permission.scheduleExactAlarm.request().isGranted) {
-      // Initialize notifications
-      const AndroidInitializationSettings androidSettings =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
-      const InitializationSettings initSettings =
-          InitializationSettings(android: androidSettings);
-      await _notifications.initialize(initSettings);
+    // Request notification permission for Android 13+
+    if (await Permission.notification.request().isGranted) {
+      // Request exact alarm permission
+      if (await Permission.scheduleExactAlarm.request().isGranted) {
+        // Initialize notifications
+        const AndroidInitializationSettings androidSettings =
+            AndroidInitializationSettings('@mipmap/ic_launcher');
+        const InitializationSettings initSettings =
+            InitializationSettings(android: androidSettings);
+        await _notifications.initialize(initSettings);
 
-      _isInitialized = true;
+        // Create notification channels
+        const AndroidNotificationChannel channel = AndroidNotificationChannel(
+          'reminder_channel',
+          'Reminders',
+          description: 'Channel for reminder notifications',
+          importance: Importance.high,
+          enableVibration: true,
+          playSound: true,
+        );
+
+        await _notifications
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>()
+            ?.createNotificationChannel(channel);
+
+        _isInitialized = true;
+      } else {
+        throw Exception('Exact alarm permission not granted');
+      }
     } else {
-      throw Exception('Exact alarm permission not granted');
+      throw Exception('Notification permission not granted');
     }
   }
 
   static Future<void> handleCommand(
       String command, BuildContext context) async {
-    // Initialize notifications if not already done
-    await _initializeNotifications();
+    try {
+      // Initialize notifications if not already done
+      await _initializeNotifications();
 
-    final lowerCommand = command.toLowerCase();
+      final lowerCommand = command.toLowerCase();
 
-    // Handle app launch commands
-    if (lowerCommand.contains('open') || lowerCommand.contains('launch')) {
-      await _handleAppLaunch(lowerCommand, context);
-    }
-    // Handle camera commands
-    else if (lowerCommand.contains('take picture') ||
-        lowerCommand.contains('take photo')) {
-      await _handleCameraAction(context);
-    }
-    // Handle URL launch commands
-    else if (lowerCommand.contains('open website') ||
-        lowerCommand.contains('go to')) {
-      await _handleUrlLaunch(lowerCommand);
-    }
-    // Handle alarm/reminder commands
-    else if (lowerCommand.contains('set alarm') ||
-        lowerCommand.contains('remind me')) {
-      await _handleAlarm(lowerCommand);
-    }
-    // Handle meeting commands
-    else if (lowerCommand.contains('create meeting')) {
-      await _handleMeeting(lowerCommand);
-    }
-    // Handle call commands
-    else if (lowerCommand.contains('call')) {
-      await _handleCall(lowerCommand);
-    }
-    // Handle Google Meet commands
-    else if (lowerCommand.contains('google meet') ||
-        lowerCommand.contains('meet')) {
-      await _handleGoogleMeet(lowerCommand);
-    }
-    // Handle gallery commands
-    else if (lowerCommand.contains('open gallery') ||
-        lowerCommand.contains('show photos')) {
-      await _handleGallery(context);
+      // Handle app launch commands
+      if (lowerCommand.contains('open') || lowerCommand.contains('launch')) {
+        await _handleAppLaunch(lowerCommand, context);
+      }
+      // Handle camera commands
+      else if (lowerCommand.contains('take picture') ||
+          lowerCommand.contains('take photo')) {
+        await _handleCameraAction(context);
+      }
+      // Handle URL launch commands
+      else if (lowerCommand.contains('open website') ||
+          lowerCommand.contains('go to')) {
+        await _handleUrlLaunch(lowerCommand);
+      }
+      // Handle alarm/reminder commands
+      else if (lowerCommand.contains('set alarm') ||
+          lowerCommand.contains('remind me')) {
+        await _handleAlarm(lowerCommand, context);
+      }
+      // Handle meeting commands
+      else if (lowerCommand.contains('create meeting')) {
+        await _handleMeeting(lowerCommand);
+      }
+      // Handle call commands
+      else if (lowerCommand.contains('call')) {
+        await _handleCall(lowerCommand);
+      }
+      // Handle Google Meet commands
+      else if (lowerCommand.contains('google meet') ||
+          lowerCommand.contains('meet')) {
+        await _handleGoogleMeet(lowerCommand);
+      }
+      // Handle gallery commands
+      else if (lowerCommand.contains('open gallery') ||
+          lowerCommand.contains('show photos')) {
+        await _handleGallery(context);
+      }
+    } catch (e) {
+      showSnackBar(context, e.toString());
     }
   }
 
@@ -149,62 +173,105 @@ class VoiceCommandHandler {
     }
   }
 
-  static Future<void> _handleAlarm(String command) async {
-    // Check if exact alarm permission is granted
-    if (!await Permission.scheduleExactAlarm.isGranted) {
-      final status = await Permission.scheduleExactAlarm.request();
-      if (!status.isGranted) {
-        throw Exception('Exact alarm permission is required to set alarms');
-      }
-    }
-
-    // Extract time from command
-    final timeRegex =
-        RegExp(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?', caseSensitive: false);
-    final match = timeRegex.firstMatch(command);
-
-    if (match != null) {
-      int hour = int.parse(match.group(1)!);
-      int minute = match.group(2) != null ? int.parse(match.group(2)!) : 0;
-      final period = match.group(3)?.toLowerCase();
-
-      if (period == 'pm' && hour < 12) {
-        hour += 12;
-      } else if (period == 'am' && hour == 12) {
-        hour = 0;
+  static Future<void> _handleAlarm(String command, BuildContext context) async {
+    try {
+      // Check if exact alarm permission is granted
+      if (!await Permission.scheduleExactAlarm.isGranted) {
+        final status = await Permission.scheduleExactAlarm.request();
+        if (!status.isGranted) {
+          showSnackBar(
+              context, 'Exact alarm permission is required to set alarms');
+          return;
+        }
       }
 
-      final now = DateTime.now();
-      var scheduledTime = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        hour,
-        minute,
-      );
+      // Extract title from command
+      final titleMatch =
+          RegExp(r'(?:set alarm|remind me) (?:for|about|to)?\s*"?([^"]+)"?')
+              .firstMatch(command);
+      final alarmTitle = titleMatch?.group(1) ?? 'Reminder';
 
-      // If the time has already passed today, schedule for tomorrow
-      if (scheduledTime.isBefore(now)) {
-        scheduledTime = scheduledTime.add(const Duration(days: 1));
+      // Extract time from command
+      final timeRegex =
+          RegExp(r'(\d{1,2})(?::(\d{2}))?\s*(am|pm)?', caseSensitive: false);
+      final match = timeRegex.firstMatch(command);
+
+      if (match != null) {
+        int hour = int.parse(match.group(1)!);
+        int minute = match.group(2) != null ? int.parse(match.group(2)!) : 0;
+        final period = match.group(3)?.toLowerCase();
+
+        if (period == 'pm' && hour < 12) {
+          hour += 12;
+        } else if (period == 'am' && hour == 12) {
+          hour = 0;
+        }
+
+        final now = DateTime.now();
+        var scheduledTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          hour,
+          minute,
+        );
+
+        // If the time has already passed today, schedule for tomorrow
+        if (scheduledTime.isBefore(now)) {
+          scheduledTime = scheduledTime.add(const Duration(days: 1));
+        }
+
+        final scheduledTzTime = tz.TZDateTime.from(scheduledTime, tz.local);
+
+        // Get the Android implementation
+        final androidImplementation =
+            _notifications.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+
+        if (androidImplementation != null) {
+          // Create notification channel if it doesn't exist
+          await androidImplementation.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'reminder_channel',
+              'Reminders',
+              description: 'Channel for reminder notifications',
+              importance: Importance.high,
+              enableVibration: true,
+              playSound: true,
+            ),
+          );
+
+          // Schedule the notification
+          await androidImplementation.zonedSchedule(
+            0,
+            alarmTitle,
+            'Time for your scheduled task!',
+            scheduledTzTime,
+            const AndroidNotificationDetails(
+              'reminder_channel',
+              'Reminders',
+              importance: Importance.high,
+              priority: Priority.high,
+              enableVibration: true,
+              playSound: true,
+            ),
+            scheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          );
+
+          showSnackBar(
+            context,
+            'Alarm "$alarmTitle" set for ${scheduledTime.hour}:${scheduledTime.minute.toString().padLeft(2, '0')}',
+          );
+        } else {
+          showSnackBar(
+              context, 'Failed to initialize notifications on this device');
+        }
+      } else {
+        showSnackBar(context,
+            'Could not understand the time. Please try again with a format like "set alarm for 3 PM" or "remind me at 3:30 PM"');
       }
-
-      final scheduledTzTime = tz.TZDateTime.from(scheduledTime, tz.local);
-
-      await _notifications.zonedSchedule(
-        0,
-        'Reminder',
-        'Time for your scheduled task!',
-        scheduledTzTime,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'reminder_channel',
-            'Reminders',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
+    } catch (e) {
+      showSnackBar(context, 'Failed to set alarm: $e');
     }
   }
 
@@ -224,11 +291,15 @@ class VoiceCommandHandler {
         meetingTime.minute,
       );
 
+      // Create Google Meet link
+      final meetLink = 'https://meet.google.com/${_generateMeetCode()}';
+
+      // Schedule the notification
       final meetingTzTime = tz.TZDateTime.from(meetingDateTime, tz.local);
       await _notifications.zonedSchedule(
         0,
-        meetingTitle,
-        meetingDescription,
+        'Meeting: $meetingTitle',
+        'Meeting Link: $meetLink\n${meetingDescription ?? ''}',
         meetingTzTime,
         const NotificationDetails(
           android: AndroidNotificationDetails(
@@ -240,14 +311,55 @@ class VoiceCommandHandler {
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
+
+      // Launch Google Meet
+      final uri = Uri.parse(meetLink);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
     }
   }
 
+  static String _generateMeetCode() {
+    // Generate a random 10-character code for Google Meet
+    const chars = 'abcdefghijklmnopqrstuvwxyz';
+    final random = DateTime.now().millisecondsSinceEpoch;
+    final code = List.generate(10, (index) {
+      final charIndex = (random + index) % chars.length;
+      return chars[charIndex];
+    }).join();
+    return code;
+  }
+
   static String _extractMeetingTitle(String command) {
-    final titleMatch =
-        RegExp(r'create meeting (?:called|about|for)?\s*"?([^"]+)"?')
-            .firstMatch(command);
-    return titleMatch?.group(1) ?? 'Untitled Meeting';
+    // Try different patterns to extract meeting title
+    final patterns = [
+      r'create meeting (?:called|about|for|with)?\s*"?([^"]+)"?', // create meeting with client
+      r'schedule meeting (?:called|about|for|with)?\s*"?([^"]+)"?', // schedule meeting with client
+      r'meeting (?:called|about|for|with)?\s*"?([^"]+)"?', // meeting with client
+      r'(?:with|about|for)\s*"?([^"]+)"?\s*(?:meeting|at|on)', // with client meeting
+    ];
+
+    for (final pattern in patterns) {
+      final match = RegExp(pattern, caseSensitive: false).firstMatch(command);
+      if (match != null && match.group(1) != null) {
+        return match.group(1)!.trim();
+      }
+    }
+
+    // If no specific title found, try to extract any meaningful phrase
+    final words = command.split(' ');
+    final meetingIndex = words.indexWhere((word) =>
+        word.toLowerCase() == 'meeting' ||
+        word.toLowerCase() == 'schedule' ||
+        word.toLowerCase() == 'create');
+
+    if (meetingIndex != -1 && meetingIndex < words.length - 1) {
+      // Get the next word after "meeting" as the title
+      return words[meetingIndex + 1].trim();
+    }
+
+    return 'Untitled Meeting';
   }
 
   static DateTime? _extractMeetingDate(String command) {
@@ -292,7 +404,11 @@ class VoiceCommandHandler {
 
   static void showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
@@ -310,44 +426,31 @@ class VoiceCommandHandler {
   static Future<void> _handleGoogleMeet(String command) async {
     // Extract meeting details
     final meetingTitle = _extractMeetingTitle(command);
-    final meetingDate = _extractMeetingDate(command);
-    final meetingTime = _extractMeetingTime(command);
+    final meetLink = 'https://meet.google.com/${_generateMeetCode()}';
 
-    if (meetingTitle != null && meetingDate != null && meetingTime != null) {
-      // Format date and time for Google Meet URL
-      final dateStr =
-          '${meetingDate.year}-${meetingDate.month.toString().padLeft(2, '0')}-${meetingDate.day.toString().padLeft(2, '0')}';
-      final timeStr =
-          '${meetingTime.hour.toString().padLeft(2, '0')}${meetingTime.minute.toString().padLeft(2, '0')}';
-
-      // Create Google Meet URL with meeting details
-      final meetUrl =
-          'https://meet.google.com/new?title=${Uri.encodeComponent(meetingTitle)}&date=$dateStr&time=$timeStr';
-
-      if (await canLaunchUrl(Uri.parse(meetUrl))) {
-        await launchUrl(Uri.parse(meetUrl));
-      }
+    // Launch Google Meet
+    final uri = Uri.parse(meetLink);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
   static Future<void> _handleGallery(BuildContext context) async {
-    // Request storage permission
-    final status = await Permission.storage.request();
-    if (status.isGranted) {
-      try {
+    try {
+      // Request storage permission for Android 13+
+      if (await Permission.photos.request().isGranted) {
         final XFile? image =
             await _picker.pickImage(source: ImageSource.gallery);
         if (image != null) {
           // Handle the selected image
           print('Selected image: ${image.path}');
         }
-      } catch (e) {
-        showSnackBar(context, 'Failed to open gallery: $e');
+      } else {
+        showSnackBar(
+            context, 'Storage permission is required to access gallery');
       }
-    } else {
-      showSnackBar(context, 'Storage permission is required to access gallery');
+    } catch (e) {
+      showSnackBar(context, 'Failed to open gallery: $e');
     }
   }
-
- 
 }
